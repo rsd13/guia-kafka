@@ -6,11 +6,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
-public class ProducerDemoWithCallback {
+public class ProducerDemoKeys {
 
-    public static void main(String[] args) {
-        Logger logger =LoggerFactory.getLogger((ProducerDemoWithCallback.class));
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        Logger logger =LoggerFactory.getLogger((ProducerDemoKeys.class));
         String bootstrapServers = "localhost:9092";
 
         //propiedades del productor
@@ -25,9 +26,29 @@ public class ProducerDemoWithCallback {
         //constructor del productor con key/value a String
         KafkaProducer<String,String> producer = new KafkaProducer<String, String>(properties);
         for(int i = 0; i<10;i++) {
+            String topic = "first_topic";
+            String value = "hola mundo" + i;
+            String key = "Key_" + i;
+
             //crear productor record
             ProducerRecord<String, String> record =
-                    new ProducerRecord<String, String>("first_topic", "hola mundo " + i);
+                    new ProducerRecord<String, String>(topic, key, value);
+            logger.info("Key: " + key);
+            /*
+            A poner una key se garantiza que esa key siempre vaya a la misma partición
+            id_0-> partition: 1
+            id_1-> partition: 2
+            id_2-> partition: 2
+            id_3-> partition: 0
+            id_4-> partition: 2
+            id_5-> partition: 2
+            id_6-> partition: 1
+            id_7-> partition: 1
+            id_8-> partition: 0
+            id_9-> partition: 0
+             */
+
+
 
             //enviar datos
             producer.send(record, new Callback() {
@@ -47,7 +68,7 @@ public class ProducerDemoWithCallback {
 
                     }
                 }
-            });
+            }).get(); //bloquea el envio para hacerlo sincrono (NO HACERLO EN PRODUCCIÓN)
         }
         //Espere a que se entreguen todos los mensajes de la cola del productor.
         producer.flush();
